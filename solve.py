@@ -9,33 +9,20 @@ valid_cards = [str(num) + suit for suit, num in itertools.product(valid_suits, v
 
 def main():
 	solved = False
-	states = [(apply(get_initstate()),[])]
+	states = [(get_initstate(), [])]
 
-	#solved, moves = solve_with( apply(get_initstate()) )
 	for state in states:
 		if is_solved(state[0]):
 			solved = True
 			break
 
-		states.extend([(apply(newstate), state[1] + [move]) for newstate, move in valid_moves(state[0]) if newstate not in [state[0] for state in states]])
+		states.extend((apply(newstate), state[1] + [move]) for newstate, move in valid_moves(state[0]) if newstate not in [s[0] for s in states])
 
 	if not solved:
 		print 'No solution'
 		sys.exit(1)
 
 	print_moves(state[1])
-
-def solve_with( state ):
-	valid = valid_moves(state)
-	for new_state, move in valid:
-		new_state = apply(new_state)
-		if is_solved(new_state):
-			return True, [move]
-		solved, moves = solve_with( new_state )
-		if solved:
-			moves.append( move )
-			return True, moves
-	return False, []
 
 def get_initstate():
 	# 3 holds, 8 rows, 1 ace, 3 "finished" stacks
@@ -177,7 +164,7 @@ def move_card(from_pos, to_pos, state):
 	elif to_key == 'stacks':
 		newstate['stacks'][get_suit(card)] = get_num(card)
 
-	return newstate, [from_pos, to_pos]
+	return newstate, (from_pos, to_pos)
 
 def collapse_dragons(dragons, state):
 	newstate = copy.deepcopy(state)
@@ -195,7 +182,7 @@ def collapse_dragons(dragons, state):
 	# Close the hold they went to
 	newstate['holds'][target_hold] = 'X'
 
-	return newstate, ['collapse']
+	return newstate, ('collapse')
 
 
 # Represents automatic moves
