@@ -225,14 +225,11 @@ def apply(state):
 # Score a state - used for ordering the heap
 def score(state):
 	score = 0
-	# Cards in the correct place are worth 2 each
-	score += sum(state['stacks'][suit]*2 for suit in state['stacks'])
-	# A collapsed set of dragons is worth 2
-	score += sum(2 for pos, hold in enumerate(state['holds']) if is_closed(hold))
-	# A 9 with nothing under it is worth 1
-	score += sum(1 for pos, row in enumerate(state['rows']) if not is_empty(row) and not is_dragon(row[0]) and get_num(row[0]) == 9)
-	# A non-dragon in the hold is worth -1
-	score += sum(-1 for pos, hold in enumerate(state['holds']) if hold is not None and not is_closed(hold) and not is_dragon(hold))
+	# Non-dragon cards in the hold are worth 2
+	score += sum(2 for pos, hold in enumerate(state['holds']) if hold is not None and not is_closed(hold) and not is_dragon(hold))
+	# Cards in the rows that aren't sitting on a valid other card (i.e. different suit, one number higher) are worth 1
+	for row in state['rows']:
+		score += sum(1 for card_pos, card in enumerate(row) if (card_pos == 0 and (is_dragon(card) or is_ace(card) or get_num(card) != 9)) or (card_pos > 0 and not can_be_placed_on(row[card_pos-1], card)))
 	return score
 
 def print_moves(moves):
