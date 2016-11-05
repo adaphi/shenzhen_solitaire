@@ -2,21 +2,31 @@ import copy
 import itertools
 import sys
 
+from heapq import *
+
 # Generate valid cards
+# Three suits, numbered 1-9, plus 4 "dragons" of each suit, plus one ace.
 valid_nums = range(1,10) + ['D']
 valid_suits = ['R', 'G', 'B']
 valid_cards = [str(num) + suit for suit, num in itertools.product(valid_suits, valid_nums)] + ['A']
 
 def main():
 	solved = False
-	states = [(get_initstate(), [])]
+	seen_states = []
+	initstate = get_initstate()
+	states = [(score(initstate), initstate, [])]
 
-	for state in states:
-		if is_solved(state[0]):
+	while states:
+		_, state, moves = heappop(states)
+		if is_solved(state):
 			solved = True
 			break
 
-		states.extend((apply(newstate), state[1] + [move]) for newstate, move in valid_moves(state[0]) if newstate not in [s[0] for s in states])
+		for newstate, newmoves in valid_moves(state):
+			newstate = apply(newstate)
+			if newstate not in seen_states:
+				seen_states.append(newstate)
+				heappush(states, (score(newstate), newstate, moves + [newmoves]))
 
 	if not solved:
 		print 'No solution'
@@ -211,6 +221,19 @@ def apply(state):
 		return apply(state)
 
 	return state
+
+# Score a state - used for ordering the heap
+def score(state):
+	score = 0
+	# Cards in the correct place are worth 2 each
+	score += sum(state['stacks'][suit]*2 for suit in state['stacks'])
+	# A collapsed set of dragons is worth 2
+	score += sum(2 for pos, hold in enumerate(state['holds']) if is_closed(hold))
+	# A 9 with nothing under it is worth 1
+	score += sum(1 for pos, row in enumerate(state['rows']) if not is_empty(row) and not is_dragon(row[0]) and get_num(row[0]) == 9)
+	# A non-dragon in the hold is worth -1
+	score += sum(-1 for pos, hold in enumerate(state['holds']) if hold is not None and not is_closed(hold) and not is_dragon(hold))
+	return score
 
 def print_moves(moves):
 	for move in moves:
