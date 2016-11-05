@@ -94,7 +94,7 @@ def get_initstate():
 		sys.exit(1)
 
 	# We expect every card to appear exactly once
-	expected_cards = [] + valid_cards
+	expected_cards = valid_cards[:]
 	for suit, stack in initstate['stacks'].items():
 			if stack > 0:
 				for card in [str(num+1) + suit for num in range(0,stack)]:
@@ -147,17 +147,26 @@ def valid_moves(state):
 	for row_pos, row in enumerate(state['rows']):
 		if is_empty(row):
 			continue
-		card = row[-1]
-		# Can always move to an empty hold
+		end_pos = len(row)-1
+		end_card = row[-1]
+		# Can always move the current last card to an empty hold
 		for hold_pos, hold in enumerate(state['holds']):
 			if hold is None:
-				new_states.append(move_card(('rows', row_pos), ('holds', hold_pos), state))
+				new_states.append(move_card(('rows', row_pos, end_pos), ('holds', hold_pos), state))
 				break
 		# Can move to other rows if the card allows
-		new_states.extend(move_card(('rows', row_pos), ('rows', row_pos2), state) for row_pos2, otherrow in enumerate(state['rows']) if is_empty(otherrow) or can_be_placed_on(otherrow[-1], card))
-		# Might be able to move to a stack, if it wasn't done automatically
-		if can_be_placed_on(str(state['stacks'][get_suit(card)]) + 'S', card):
-			new_states.append(move_card(('rows', row_pos), ('stacks',), state))
+		# We can move several at once if it's valid to do so
+		moveable_cards = []
+		for card_pos, card in reversed(list(enumerate(row))):
+			moveable_cards.append((card_pos, card))
+			if card_pos > 0 and not can_be_placed_on(row[card_pos-1], card):
+				break
+
+		for card_pos, card in moveable_cards:
+			new_states.extend(move_card(('rows', row_pos, card_pos), ('rows', row_pos2), state) for row_pos2, otherrow in enumerate(state['rows']) if is_empty(otherrow) or can_be_placed_on(otherrow[-1], card))
+		# Might be able to move the end card to a stack, if it wasn't done automatically
+		if can_be_placed_on(str(state['stacks'][get_suit(end_card)]) + 'S', end_card):
+			new_states.append(move_card(('rows', row_pos, end_pos), ('stacks',), state))
 
 	# Check to see if we can collapse any dragon cards
 	hold_dragons = [('holds', hold_pos, card) for hold_pos, card in enumerate(state['holds']) if card is not None and is_dragon(card)]
@@ -173,23 +182,24 @@ def valid_moves(state):
 
 def move_card(from_pos, to_pos, state):
 	newstate = copy.deepcopy(state)
-	card = None
+	cards = []
 	from_key = from_pos[0]
 	if from_key == 'holds':
-		card = state['holds'][from_pos[1]]
+		cards = [state['holds'][from_pos[1]]]
 		newstate['holds'][from_pos[1]] = None
 	elif from_key == 'rows':
-		card = newstate['rows'][from_pos[1]].pop()
+		cards = newstate['rows'][from_pos[1]][from_pos[2]:]
+		newstate['rows'][from_pos[1]] = newstate['rows'][from_pos[1]][:from_pos[2]]
 
 	to_key = to_pos[0]
 	if to_key == 'holds':
-		newstate['holds'][to_pos[1]] = card
+		newstate['holds'][to_pos[1]] = cards[0]
 	elif to_key == 'rows':
-		newstate['rows'][to_pos[1]].append(card)
+		newstate['rows'][to_pos[1]].extend(cards)
 	elif to_key == 'ace':
 		newstate['ace'] = True
 	elif to_key == 'stacks':
-		newstate['stacks'][get_suit(card)] = get_num(card)
+		newstate['stacks'][get_suit(cards[0])] = get_num(cards[0])
 
 	return newstate, (from_pos, to_pos)
 
@@ -218,7 +228,7 @@ def apply(state):
 	# Move the ace, if it is showing
 	ace = [row_pos for row_pos, row in enumerate(state['rows']) if not is_empty(row) and is_ace(row[-1])]
 	if ace:
-		state, _ = move_card(('rows', ace[0]), ('ace',), state)
+		state, _ = move_card(('rows', ace[0], -1), ('ace',), state)
 		changed = True
 
 	# Move any number cards to their home in the stacks, if appropriate
@@ -230,7 +240,7 @@ def apply(state):
 			continue
 		# Can only be moved if all other stacks have the previous number or better
 		if all(stack >= get_num(card)-1 for suit, stack in state['stacks'].items()):
-			state, _ = move_card(('rows', row_pos), ('stacks',), state)
+			state, _ = move_card(('rows', row_pos, -1), ('stacks',), state)
 			changed = True
 
 	# If anything changed, keep going
@@ -267,14 +277,17 @@ def print_moves(moves):
 			print 'Collapse dragons'
 			continue
 
-		instruction = 'Move card from %s #%s to %s'
+		instruction = 'Move card%s from %s #%s to %s'
+		card_pos = ''
 		from_place = move[0][0][:-1]
 		from_pos = move[0][1] + 1
+		if from_place == 'row':
+			card_pos = ' #%s' % (move[0][2] + 1)
 		to_place = move[1][0][:-1]
 		if to_place == 'hold' or to_place == 'row':
 			to_place += ' #%s' % (move[1][1] + 1)
 
-		print instruction % (from_place, from_pos, to_place)
+		print instruction % (card_pos, from_place, from_pos, to_place)
 
 def get_num(card):
 	return int(card[0])
