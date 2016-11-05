@@ -61,43 +61,33 @@ def get_initstate():
 	}
 
 	print 'Enter initial state:'
-	#for i in range(0,8):
-	#	row = [x.strip().upper() for x in raw_input('Row %s: ' % (i+1)).split(',')]
-	#	if any(card not in valid_cards for card in row):
-	#		print 'Invalid card given, must be Num + Suit'
-	#		sys.exit(1)
-	#	initstate['rows'][i] = row
+	for i in range(0,8):
+		row = [x.strip().upper() for x in raw_input('Row %s: ' % (i+1)).split(',')]
+		if any(card not in valid_cards for card in row):
+			print 'Invalid card given, must be Num + Suit'
+			sys.exit(1)
+		initstate['rows'][i] = row
 
-	#prompt = raw_input('Any in stacks? (Y/N): ').strip().upper()
-	#if prompt:
-	#	stack_r = raw_input('Enter highest number in stack for RED (0 for nothing): ').strip().upper()
-	#		if not stack_r.isdigit() or int(stack_r) > 9:
-	#			print 'Bad stack number'
-	#			sys.exit(1)
-	#		if int(stack_r) > 0:
-	#			initstate['stacks']['R'] = int(stack_r)
-	#	stack_g = raw_input('Enter highest number in stack for GREEN (0 for nothing): ').strip().upper()
-	#		if not stack_g.isdigit() or int(stack_g) > 9:
-	#			print 'Bad stack number'
-	#			sys.exit(1)
-	#		if int(stack_g) > 0:
-	#			initstate['stacks']['G'] = int(stack_g)
-	#	stack_b = raw_input('Enter highest number in stack for BLACK (0 for nothing): ').strip().upper()
-	#		if not stack_b.isdigit() or int(stack_b) > 9:
-	#			print 'Bad stack number'
-	#			sys.exit(1)
-	#		if int(stack_b) > 0:
-	#			initstate['stacks']['B'] = int(stack_b)
-
-	# Test puzzle
-	initstate['rows'][0] = [ 'DR', '1R', '7G', 'DB', '5R' ]
-	initstate['rows'][1] = [ '4G', '4B', 'DG', '3R', '5G' ]
-	initstate['rows'][2] = [ '3G', 'DR', 'DB', '6G', 'DB' ]
-	initstate['rows'][3] = [ 'DG', '6R', 'DG', 'A', '9R' ]
-	initstate['rows'][4] = [ '4R', 'DB', '9G', '1G', '8R' ]
-	initstate['rows'][5] = [ '3B', 'DR', '8B', '7B', '9B' ]
-	initstate['rows'][6] = [ '8G', '2R', '2G', 'DR', '7R' ]
-	initstate['rows'][7] = [ '5B', 'DG', '1B', '6B', '2B' ]
+	prompt = raw_input('Any in stacks? (Y/N): ').strip().upper()
+	if prompt == 'Y':
+		stack_r = raw_input('Enter highest number in stack for RED (0 for nothing): ').strip().upper()
+		if not stack_r.isdigit() or int(stack_r) > 9:
+			print 'Bad stack number'
+			sys.exit(1)
+		if int(stack_r) > 0:
+			initstate['stacks']['R'] = int(stack_r)
+		stack_g = raw_input('Enter highest number in stack for GREEN (0 for nothing): ').strip().upper()
+		if not stack_g.isdigit() or int(stack_g) > 9:
+			print 'Bad stack number'
+			sys.exit(1)
+		if int(stack_g) > 0:
+			initstate['stacks']['G'] = int(stack_g)
+		stack_b = raw_input('Enter highest number in stack for BLACK (0 for nothing): ').strip().upper()
+		if not stack_b.isdigit() or int(stack_b) > 9:
+			print 'Bad stack number'
+			sys.exit(1)
+		if int(stack_b) > 0:
+			initstate['stacks']['B'] = int(stack_b)
 
 	total = 0
 	for row in initstate['rows']:
