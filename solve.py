@@ -10,29 +10,45 @@ valid_nums = range(1,10) + ['D']*4
 valid_suits = ['R', 'G', 'B']
 valid_cards = [str(num) + suit for suit, num in itertools.product(valid_suits, valid_nums)] + ['A']
 
+max_iter = 5000
+
 def main():
 	solved = False
 	seen_states = []
 	initstate = get_initstate()
 	states = [(score(initstate), initstate, [])]
+	count=0
 
+	print 'Thinking...'
 	while states:
+		count+= 1
 		_, state, moves = heappop(states)
 		if is_solved(state):
 			solved = True
 			break
 
-		for newstate, newmoves in valid_moves(state):
+		for newstate, newmove in valid_moves(state):
 			newstate = apply(newstate)
+			if is_solved(newstate):
+				heappush(states, (-999, newstate, moves + [newmove]))
+				break
 			if not any(states_equal(newstate, seen_state) for seen_state in seen_states):
 				seen_states.append(newstate)
-				heappush(states, (score(newstate), newstate, moves + [newmoves]))
+				heappush(states, (score(newstate), newstate, moves + [newmove]))
+
+		if count == max_iter:
+			print 'Couldn\'t solve after %s iterations' % max_iter
+			print 'Best go so far:'
+			_, state, moves = heappop(states)
+			print state
+			print_moves(moves)
+			sys.exit(1)
 
 	if not solved:
 		print 'No solution'
 		sys.exit(1)
 
-	print "Solved!"
+	print 'Solved!'
 	print_moves(moves)
 
 def get_initstate():
@@ -103,12 +119,12 @@ def get_initstate():
 	for row_pos, row in enumerate(initstate['rows']):
 		for card_pos, card in enumerate(row):
 			if card not in expected_cards:
-				print "Bad inital state: duplicate card found at row %s, card %s" % ((row_pos+1), (card_pos+1))
+				print 'Bad inital state: duplicate card found at row %s, card %s' % ((row_pos+1), (card_pos+1))
 				sys.exit(1)
 			expected_cards.remove(card)
 
 	if len(expected_cards) > 0:
-		print "Bad initial state: Missing cards " + expected_cards
+		print 'Bad initial state: Missing cards ' + expected_cards
 
 	return initstate
 
@@ -161,7 +177,6 @@ def valid_moves(state):
 			moveable_cards.append((card_pos, card))
 			if card_pos > 0 and not can_be_placed_on(row[card_pos-1], card):
 				break
-
 		for card_pos, card in moveable_cards:
 			new_states.extend(move_card(('rows', row_pos, card_pos), ('rows', row_pos2), state) for row_pos2, otherrow in enumerate(state['rows']) if is_empty(otherrow) or can_be_placed_on(otherrow[-1], card))
 		# Might be able to move the end card to a stack, if it wasn't done automatically
