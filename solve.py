@@ -6,7 +6,7 @@ from heapq import *
 
 # Generate valid cards
 # Three suits, numbered 1-9, plus 4 "dragons" of each suit, plus one ace.
-valid_nums = range(1,10) + ['D']
+valid_nums = range(1,10) + ['D']*4
 valid_suits = ['R', 'G', 'B']
 valid_cards = [str(num) + suit for suit, num in itertools.product(valid_suits, valid_nums)] + ['A']
 
@@ -24,7 +24,7 @@ def main():
 
 		for newstate, newmoves in valid_moves(state):
 			newstate = apply(newstate)
-			if newstate not in seen_states:
+			if not any(states_equal(newstate, seen_state) for seen_state in seen_states):
 				seen_states.append(newstate)
 				heappush(states, (score(newstate), newstate, moves + [newmoves]))
 
@@ -32,7 +32,8 @@ def main():
 		print 'No solution'
 		sys.exit(1)
 
-	print_moves(state[1])
+	print "Solved!"
+	print_moves(moves)
 
 def get_initstate():
 	# 3 holds, 8 rows, 1 ace, 3 "finished" stacks
@@ -72,16 +73,15 @@ def get_initstate():
 	#		if int(stack_b) > 0:
 	#			initstate['stacks']['B'] = int(stack_b)
 
-	initstate['rows'][0] = [ 'DR', '9G', 'DR', '5G', '9R' ]
-	initstate['rows'][1] = [ 'DR', '3G', '3B', '4G', '4R' ]
-	initstate['rows'][2] = [ 'DG', '8G', 'DB', '6G' ]
-	initstate['rows'][3] = [ 'DB', '8B', '7G', '9B', 'DG' ]
-	initstate['rows'][4] = [ '1R', 'DB', '5R', '6R', 'DG' ]
-	initstate['rows'][5] = [ 'DG', '2B', 'DR', '7B', '2R' ]
-	initstate['rows'][6] = [ '5B', '3R', '1B', '8R' ]
-	initstate['rows'][7] = [ '7R', 'DB', '4B', 'A', '6B' ]
-
-	initstate['stacks']['G'] = 2
+	# Test puzzle
+	initstate['rows'][0] = [ 'DR', '1R', '7G', 'DB', '5R' ]
+	initstate['rows'][1] = [ '4G', '4B', 'DG', '3R', '5G' ]
+	initstate['rows'][2] = [ '3G', 'DR', 'DB', '6G', 'DB' ]
+	initstate['rows'][3] = [ 'DG', '6R', 'DG', 'A', '9R' ]
+	initstate['rows'][4] = [ '4R', 'DB', '9G', '1G', '8R' ]
+	initstate['rows'][5] = [ '3B', 'DR', '8B', '7B', '9B' ]
+	initstate['rows'][6] = [ '8G', '2R', '2G', 'DR', '7R' ]
+	initstate['rows'][7] = [ '5B', 'DG', '1B', '6B', '2B' ]
 
 	total = 0
 	for row in initstate['rows']:
@@ -92,6 +92,23 @@ def get_initstate():
 	if total != 40:
 		print 'Bad number of cards given. Expected 40, but got %s' % total
 		sys.exit(1)
+
+	# We expect every card to appear exactly once
+	expected_cards = [] + valid_cards
+	for suit, stack in initstate['stacks'].items():
+			if stack > 0:
+				for card in [str(num+1) + suit for num in range(0,stack)]:
+					expected_cards.remove(card)
+
+	for row_pos, row in enumerate(initstate['rows']):
+		for card_pos, card in enumerate(row):
+			if card not in expected_cards:
+				print "Bad inital state: duplicate card found at row %s, card %s" % ((row_pos+1), (card_pos+1))
+				sys.exit(1)
+			expected_cards.remove(card)
+
+	if len(expected_cards) > 0:
+		print "Bad initial state: Missing cards " + expected_cards
 
 	return initstate
 
@@ -109,7 +126,7 @@ def is_solved(state):
 		return False
 
 	# Are all stacks showing 9?
-	if any(get_num(card) != 9 for suit, stack in state['stacks'].items()):
+	if any(stack != 9 for suit, stack in state['stacks'].items()):
 		return False
 
 	return True
@@ -232,9 +249,21 @@ def score(state):
 		score += sum(1 for card_pos, card in enumerate(row) if (card_pos == 0 and (is_dragon(card) or is_ace(card) or get_num(card) != 9)) or (card_pos > 0 and not can_be_placed_on(row[card_pos-1], card)))
 	return score
 
+# Equality check for states
+def states_equal(state1, state2):
+	if state1['stacks'] != state2['stacks']:
+		return False
+	if state1['ace'] != state2['ace']:
+		return False
+	if sorted(state1['holds']) != sorted(state2['holds']):
+		return False
+	if sorted(state1['rows']) != sorted(state2['rows']):
+		return False
+	return True
+
 def print_moves(moves):
 	for move in moves:
-		if move[0] == 'collapse':
+		if move == 'collapse':
 			print 'Collapse dragons'
 			continue
 
