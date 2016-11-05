@@ -269,9 +269,16 @@ def score(state):
 	score = 0
 	# Non-dragon cards in the hold are worth 2
 	score += sum(2 for pos, hold in enumerate(state['holds']) if hold is not None and not is_closed(hold) and not is_dragon(hold))
-	# Cards in the rows that aren't sitting on a valid other card (i.e. different suit, one number higher) are worth 1
+	# Dragons in the hold are worth 1
+	score += sum(1 for pos, hold in enumerate(state['holds']) if hold is not None and not is_closed(hold) and is_dragon(hold))
+	# From the end of a row, cards sitting on a valid other are (i.e. different suit, one number higher) are worth 0. Every other card in that row is worth 1
 	for row in state['rows']:
-		score += sum(1 for card_pos, card in enumerate(row) if (card_pos == 0 and (is_dragon(card) or is_ace(card) or get_num(card) != 9)) or (card_pos > 0 and not can_be_placed_on(row[card_pos-1], card)))
+		row_score = 0
+		for card_pos, card in reversed(list(enumerate(row))):
+			if (is_dragon(card) or is_ace(card) or (card_pos > 0 and not can_be_placed_on(row[card_pos-1], card))):
+				row_score = card_pos + 1
+				break
+		score += row_score
 	return score
 
 # Equality check for states
